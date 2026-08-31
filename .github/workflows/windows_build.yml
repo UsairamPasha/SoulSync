@@ -7,16 +7,20 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Visual Studio C++ tools
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Set up Flutter SDK
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.27.3'
           cache: true
 
       - name: Enable Windows Desktop Support
@@ -26,7 +30,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Windows Executable
-        run: flutter build windows --release
+        run: flutter build windows --release --no-tree-shake-icons
 
       - name: Compress Windows Build into ZIP
         shell: powershell
@@ -39,3 +43,4 @@ jobs:
           name: SoulSync-Windows-Release
           path: soulsync-windows.zip
           retention-days: 30
+
