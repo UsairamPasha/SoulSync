@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:soulsync/core/config/app_config.dart';
 import 'package:soulsync/core/logger/app_logger.dart';
 import 'package:soulsync/core/security/auth_token_manager.dart';
@@ -26,7 +26,7 @@ class WebSocketService {
   final AppConfig _config;
   final AuthTokenManager _tokenManager;
 
-  WebSocket? _socket;
+  WebSocketChannel? _channel;
   RealtimeConnectionStatus _status = RealtimeConnectionStatus.disconnected;
   int _latencyMs = 0;
   int _reconnectAttempts = 0;
@@ -92,16 +92,17 @@ class WebSocketService {
       final wsUrl = '$wsHost/ws/presence/?token=$token';
 
       AppLogger.debug('[Realtime] Connecting to WebSocket: $wsUrl');
-      _socket =
-          await WebSocket.connect(wsUrl).timeout(const Duration(seconds: 10));
+      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      await channel.ready.timeout(const Duration(seconds: 10));
 
+      _channel = channel;
       _updateStatus(RealtimeConnectionStatus.connected);
       _reconnectAttempts = 0;
       AppLogger.info('[Realtime] WebSocket Connected');
 
       _startHeartbeat();
 
-      _socket?.listen(
+      _channel?.stream.listen(
         (data) {
           try {
             if (data is String) {
@@ -132,8 +133,8 @@ class WebSocketService {
   }
 
   void _handleDisconnect() {
-    _socket?.close();
-    _socket = null;
+    _channel?.sink.close();
+    _channel = null;
     _stopHeartbeat();
 
     if (_status == RealtimeConnectionStatus.authFailed) return;
@@ -156,8 +157,8 @@ class WebSocketService {
   }
 
   void send(Map<String, dynamic> data) {
-    if (_status == RealtimeConnectionStatus.connected && _socket != null) {
-      _socket?.add(jsonEncode(data));
+    if (_status == RealtimeConnectionStatus.connected && _channel != null) {
+      _channel?.sink.add(jsonEncode(data));
     }
   }
 
@@ -198,8 +199,8 @@ class WebSocketService {
   Future<void> disconnect() async {
     _reconnectTimer?.cancel();
     _stopHeartbeat();
-    await _socket?.close();
-    _socket = null;
+    await _channel?.sink.close();
+    _channel = null;
     _updateStatus(RealtimeConnectionStatus.disconnected);
     AppLogger.info('[Realtime] Disconnected by user');
   }
