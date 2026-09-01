@@ -96,6 +96,13 @@ class AudioPlayerService {
     _activeLoadPath = path;
 
     try {
+      if (kIsWeb) {
+        debugPrint('[AudioEngine] Resetting Web HTML5 Audio Element before loading: $path');
+        try {
+          await _player.stop();
+        } catch (_) {}
+      }
+
       Duration? duration;
       if (path.startsWith('http://') || path.startsWith('https://')) {
         debugPrint('[AudioEngine] Loading HTTP Audio Source: $path');
