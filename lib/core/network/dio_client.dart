@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:soulsync/core/config/app_config.dart';
@@ -21,8 +22,10 @@ class DioClient {
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-              'ngrok-skip-browser-warning': '69420',
-              'User-Agent': 'SoulSyncApp/1.0',
+              if (!kIsWeb) ...{
+                'ngrok-skip-browser-warning': '69420',
+                'User-Agent': 'SoulSyncApp/1.0',
+              },
             },
           ),
         ) {
