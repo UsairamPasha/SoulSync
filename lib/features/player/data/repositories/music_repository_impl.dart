@@ -180,13 +180,10 @@ class LocalMusicRepositoryImpl implements MusicRepository {
               '';
           if (activeHost.isNotEmpty) {
             try {
-              final parsed = Uri.parse(streamUrl);
               final activeUri = Uri.parse(_config?.baseUrl ?? ApiConstants.baseUrl);
-              streamUrl = parsed.replace(
-                scheme: activeUri.scheme,
-                host: activeUri.host,
-                port: activeUri.hasPort ? activeUri.port : null,
-              ).toString();
+              final cleanBase = '${activeUri.scheme}://${activeUri.host}${activeUri.hasPort ? ':${activeUri.port}' : ''}';
+              final pathPart = streamUrl.replaceFirst(RegExp(r'https?://[^/]+'), '');
+              streamUrl = '$cleanBase$pathPart';
             } catch (_) {}
           }
           return SongModel(
@@ -313,8 +310,7 @@ class LocalMusicRepositoryImpl implements MusicRepository {
       return songs.firstWhere((s) => s.id == id || s.assetPath == id);
     } catch (_) {}
 
-    final activeBaseUrl = _config?.baseUrl ?? ApiConstants.baseUrl;
-    final cleanBase = activeBaseUrl.replaceFirst('/api/v1', '');
+
 
     if (id.startsWith('http://') || id.startsWith('https://')) {
       return SongModel(
@@ -327,17 +323,7 @@ class LocalMusicRepositoryImpl implements MusicRepository {
       );
     }
 
-    if (id.startsWith('remote_music_')) {
-      final streamUrl = '$cleanBase/media/music/$id.mp3';
-      return SongModel(
-        id: id,
-        title: 'Track ${id.replaceAll('remote_music_', '')}',
-        artist: 'SoulSync Cloud Library',
-        album: 'SoulSync Cloud',
-        assetPath: streamUrl,
-        duration: const Duration(seconds: 210),
-      );
-    }
+
 
     if (id.startsWith('mediastore_')) {
       return SongModel(
