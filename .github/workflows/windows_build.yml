@@ -34,6 +34,9 @@ jobs:
       - name: Compress Windows Build into ZIP
         shell: powershell
         run: |
+          Copy-Item -Path "C:\Windows\System32\vcruntime140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
+          Copy-Item -Path "C:\Windows\System32\vcruntime140_1.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
+          Copy-Item -Path "C:\Windows\System32\msvcp140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath soulsync-windows.zip -Force
 
       - name: Upload Windows Build Artifact
