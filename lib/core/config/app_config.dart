@@ -57,7 +57,12 @@ class ServerUrlNotifier extends StateNotifier<String> {
   Future<void> _init() async {
     final saved = await _storageService.getSavedServerUrl();
     if (saved != null && saved.isNotEmpty) {
-      state = saved;
+      if (saved.contains('trycloudflare.com') && saved != defaultUrl) {
+        await _storageService.clearServerUrl();
+        state = defaultUrl;
+      } else {
+        state = saved;
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:soulsync/core/config/app_config.dart';
 import 'package:soulsync/core/constants/app_colors.dart';
 import 'package:soulsync/core/network/dio_client.dart';
 import 'package:soulsync/core/storage/server_url_storage_service.dart';
+import 'package:soulsync/features/auth/presentation/providers/auth_provider.dart';
 import 'package:soulsync/features/playback/presentation/providers/playback_session_provider.dart';
 import 'package:soulsync/features/player/presentation/providers/player_provider.dart';
 import 'package:soulsync/features/realtime/presentation/providers/realtime_providers.dart';
@@ -115,8 +116,10 @@ class _ServerUrlDialogState extends ConsumerState<ServerUrlDialog> {
         .updateUrl(cleanUrl);
 
     if (success && mounted) {
-      // Invalidate network & websocket providers to apply new URL
+      // Invalidate network, auth & websocket providers to apply new URL
       ref.invalidate(dioClientProvider);
+      ref.invalidate(authRepositoryProvider);
+      ref.invalidate(authNotifierProvider);
       ref.invalidate(musicRepositoryProvider);
       ref.invalidate(webSocketServiceProvider);
       ref.invalidate(playbackSessionNotifierProvider);
@@ -141,6 +144,8 @@ class _ServerUrlDialogState extends ConsumerState<ServerUrlDialog> {
       _testSuccess = null;
     });
     ref.invalidate(dioClientProvider);
+    ref.invalidate(authRepositoryProvider);
+    ref.invalidate(authNotifierProvider);
     ref.invalidate(musicRepositoryProvider);
     ref.invalidate(webSocketServiceProvider);
     ref.invalidate(playbackSessionNotifierProvider);
