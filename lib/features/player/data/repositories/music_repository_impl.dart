@@ -336,7 +336,25 @@ class LocalMusicRepositoryImpl implements MusicRepository {
       );
     }
 
-    return null;
+    if (id.startsWith('mediastore_')) {
+      return SongModel(
+        id: id,
+        title: 'Partner Audio Track',
+        artist: 'SoulSync Partner',
+        album: 'Partner Device',
+        assetPath: 'assets/music/sample_1.mp3',
+        duration: const Duration(seconds: 210),
+      );
+    }
+
+    return SongModel(
+      id: id,
+      title: 'Partner Track',
+      artist: 'SoulSync Partner',
+      album: 'SoulSync Room',
+      assetPath: 'assets/music/sample_1.mp3',
+      duration: const Duration(seconds: 210),
+    );
   }
 
   @override
