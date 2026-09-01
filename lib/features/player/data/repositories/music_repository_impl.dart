@@ -161,8 +161,10 @@ class LocalMusicRepositoryImpl implements MusicRepository {
           .get<Map<String, dynamic>>(
             '$apiBaseUrl/music/',
             options: Options(headers: {
-              'ngrok-skip-browser-warning': '69420',
-              'User-Agent': 'SoulSyncApp/1.0',
+              if (!kIsWeb) ...{
+                'ngrok-skip-browser-warning': '69420',
+                'User-Agent': 'SoulSyncApp/1.0',
+              },
             }),
           )
           .timeout(const Duration(seconds: 15));
