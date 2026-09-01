@@ -92,10 +92,8 @@ class WebSocketService {
       final wsUrl = '$wsHost/ws/presence/?token=$token';
 
       AppLogger.debug('[Realtime] Connecting to WebSocket: $wsUrl');
-      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
-      await channel.ready.timeout(const Duration(seconds: 10));
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
-      _channel = channel;
       _updateStatus(RealtimeConnectionStatus.connected);
       _reconnectAttempts = 0;
       AppLogger.info('[Realtime] WebSocket Connected');
