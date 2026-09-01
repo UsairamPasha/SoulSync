@@ -168,6 +168,10 @@ class StreamAudioView(View):
                 response['Accept-Ranges'] = 'bytes'
                 response['Cache-Control'] = 'public, max-age=31536000, immutable'
                 response['ETag'] = etag
+                response['Access-Control-Allow-Origin'] = '*'
+                response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+                response['Access-Control-Allow-Headers'] = '*'
+                response['Access-Control-Expose-Headers'] = 'Content-Range, Content-Length, Accept-Ranges'
                 return response
             except Exception as e:
                 pass
@@ -181,7 +185,16 @@ class StreamAudioView(View):
         response['Accept-Ranges'] = 'bytes'
         response['Cache-Control'] = 'public, max-age=31536000, immutable'
         response['ETag'] = etag
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = '*'
+        response['Access-Control-Expose-Headers'] = 'Content-Range, Content-Length, Accept-Ranges'
         return response
 
-
-
+    def options(self, request, filename):
+        response = HttpResponse(status=200)
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = '*'
+        response['Access-Control-Expose-Headers'] = 'Content-Range, Content-Length, Accept-Ranges'
+        return response
