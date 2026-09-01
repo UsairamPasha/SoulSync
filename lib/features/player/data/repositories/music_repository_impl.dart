@@ -178,12 +178,15 @@ class LocalMusicRepositoryImpl implements MusicRepository {
           var streamUrl = item['stream_url'] as String? ??
               item['asset_path'] as String? ??
               '';
-          if (streamUrl.contains('trycloudflare.com') &&
-              activeHost.isNotEmpty) {
+          if (activeHost.isNotEmpty) {
             try {
               final parsed = Uri.parse(streamUrl);
-              streamUrl =
-                  parsed.replace(host: activeHost, scheme: 'https').toString();
+              final activeUri = Uri.parse(_config?.baseUrl ?? ApiConstants.baseUrl);
+              streamUrl = parsed.replace(
+                scheme: activeUri.scheme,
+                host: activeUri.host,
+                port: activeUri.hasPort ? activeUri.port : null,
+              ).toString();
             } catch (_) {}
           }
           return SongModel(
