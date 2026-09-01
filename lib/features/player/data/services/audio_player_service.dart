@@ -103,10 +103,12 @@ class AudioPlayerService {
           final cleanUri = Uri.tryParse(path) ?? Uri.parse(Uri.encodeFull(path));
           final audioSource = AudioSource.uri(
             cleanUri,
-            headers: const {
-              'ngrok-skip-browser-warning': '69420',
-              'User-Agent': 'SoulSyncApp/1.0',
-            },
+            headers: kIsWeb
+                ? null
+                : const {
+                    'ngrok-skip-browser-warning': '69420',
+                    'User-Agent': 'SoulSyncApp/1.0',
+                  },
           );
 
           duration = await _player.setAudioSource(audioSource);
@@ -117,6 +119,12 @@ class AudioPlayerService {
           debugPrint('[AudioEngine] Error parsing or loading HTTP URI ($path): $e');
           rethrow;
         }
+      } else if (kIsWeb) {
+        debugPrint('[AudioEngine] Loading Web Asset Audio Source: $path');
+        duration = await _player.setAsset(path);
+        _currentlyLoadedPath = path;
+        if (!completer.isCompleted) completer.complete(duration);
+        return duration ?? const Duration(seconds: 210);
       } else if (path.startsWith('assets/')) {
         final tempDir = await getTemporaryDirectory();
         final filename = path.split('/').last;
