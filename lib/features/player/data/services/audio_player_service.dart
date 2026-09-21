@@ -112,7 +112,13 @@ class AudioPlayerService {
                   },
           );
 
-          duration = await _player.setAudioSource(audioSource);
+          duration = await _player.setAudioSource(audioSource).timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              debugPrint('[AudioEngine] SetAudioSource timed out for $path, falling back to estimated duration.');
+              return const Duration(seconds: 210);
+            },
+          );
           _currentlyLoadedPath = path;
           if (!completer.isCompleted) completer.complete(duration);
           return duration ?? const Duration(seconds: 210);
@@ -205,13 +211,6 @@ class AudioPlayerService {
     if (_player.processingState == ProcessingState.completed) {
       debugPrint('[AudioEngine] Track completed previously. Seeking to 00:00 before playing.');
       await _player.seek(Duration.zero);
-    }
-
-    if (kIsWeb && _player.playing) {
-      debugPrint('[AudioEngine] Web: Resetting playing state via pause before play to ensure HTML5 audio element resumes.');
-      try {
-        await _player.pause();
-      } catch (_) {}
     }
 
     debugPrint('[AudioEngine] Calling play()');
