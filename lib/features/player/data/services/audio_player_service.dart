@@ -99,6 +99,9 @@ class AudioPlayerService {
       if (kIsWeb) {
         debugPrint('[AudioEngine] Resetting Web HTML5 Audio Element before loading: $path');
         try {
+          if (_player.playing) {
+            await _player.pause();
+          }
           await _player.stop();
         } catch (_) {}
       }
@@ -211,6 +214,11 @@ class AudioPlayerService {
     if (_player.processingState == ProcessingState.completed) {
       debugPrint('[AudioEngine] Track completed previously. Seeking to 00:00 before playing.');
       await _player.seek(Duration.zero);
+      if (kIsWeb && _player.playing) {
+        try {
+          await _player.pause();
+        } catch (_) {}
+      }
     }
 
     debugPrint('[AudioEngine] Calling play()');
