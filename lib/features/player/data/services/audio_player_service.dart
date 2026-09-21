@@ -96,12 +96,6 @@ class AudioPlayerService {
     _activeLoadPath = path;
 
     try {
-      if (kIsWeb) {
-        debugPrint('[AudioEngine] Resetting Web HTML5 Audio Element before loading: $path');
-        try {
-          await _player.stop();
-        } catch (_) {}
-      }
 
       Duration? duration;
       if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -211,6 +205,13 @@ class AudioPlayerService {
     if (_player.processingState == ProcessingState.completed) {
       debugPrint('[AudioEngine] Track completed previously. Seeking to 00:00 before playing.');
       await _player.seek(Duration.zero);
+    }
+
+    if (kIsWeb && _player.playing) {
+      debugPrint('[AudioEngine] Web: Resetting playing state via pause before play to ensure HTML5 audio element resumes.');
+      try {
+        await _player.pause();
+      } catch (_) {}
     }
 
     debugPrint('[AudioEngine] Calling play()');

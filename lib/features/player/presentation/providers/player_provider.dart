@@ -67,6 +67,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration?>? _durationSub;
   StreamSubscription<ja.PlayerState>? _playerStateSub;
+  bool _isAutoSkipping = false;
 
   PlayerNotifier({
     required AudioPlayerService audioService,
@@ -125,9 +126,14 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         );
       }
 
-      // Only skip to next if the song completed naturally (position > 1s)
-      if (isCompleted &&
-          state.playbackState.position > const Duration(seconds: 1)) {
+      // Only skip to next if the song completed naturally.
+      // On Web, HTML5 audio 'ended' event signals natural completion directly,
+      // while position may reset to 0 in some browsers upon completion.
+      final shouldAutoNext = isCompleted &&
+          (kIsWeb || state.playbackState.position > const Duration(seconds: 1));
+      if (shouldAutoNext) {
+        if (_isAutoSkipping) return;
+        _isAutoSkipping = true;
         debugPrint(
             '[PlayerNotifier] Song completed naturally. Processing auto-next.');
 
@@ -137,15 +143,20 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
 
         if (sessionState.hasActiveSession && !isHost) {
           debugPrint('[PlayerNotifier] Non-host partner awaiting host auto-next event.');
+          _isAutoSkipping = false;
           return;
         }
 
         if (state.playbackState.repeatMode == RepeatModeEnum.one) {
           debugPrint('[PlayerNotifier] Repeat One enabled. Replaying current song.');
           seek(Duration.zero);
-          _audioService.play();
+          _audioService.play().whenComplete(() => _isAutoSkipping = false);
         } else {
-          skipToNext();
+          skipToNext().whenComplete(() {
+            Future.delayed(const Duration(milliseconds: 600), () {
+              _isAutoSkipping = false;
+            });
+          });
         }
       }
     });
