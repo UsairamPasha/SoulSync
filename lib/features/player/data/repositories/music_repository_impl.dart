@@ -21,7 +21,6 @@ class LocalMusicRepositoryImpl implements MusicRepository {
 
   List<SongEntity>? _cachedSongs;
   List<SongEntity>? _cachedAssetCatalog;
-  List<SongEntity>? _cachedRemoteCatalog;
   SortOption _currentSort = SortOption.name;
 
   LocalMusicRepositoryImpl({
@@ -150,20 +149,9 @@ class LocalMusicRepositoryImpl implements MusicRepository {
   }
 
   Future<List<SongEntity>> _fetchRemoteCatalog(Set<String> favoriteIds) async {
-    if (_cachedRemoteCatalog != null && _cachedRemoteCatalog!.isNotEmpty) {
-      return _cachedRemoteCatalog!
-          .map((s) => s.copyWith(
-                isFavorite:
-                    favoriteIds.contains(s.id) || favoriteIds.contains(s.assetPath),
-              ))
-          .toList();
-    }
-
     try {
       final dio = Dio(BaseOptions(
         validateStatus: (status) => status != null && status < 500,
-        connectTimeout: const Duration(seconds: 40),
-        receiveTimeout: const Duration(seconds: 40),
       ));
       final apiBaseUrl = _config?.apiBaseUrl ?? ApiConstants.baseUrl;
       final activeHost =
@@ -179,13 +167,13 @@ class LocalMusicRepositoryImpl implements MusicRepository {
               },
             }),
           )
-          .timeout(const Duration(seconds: 40));
+          .timeout(const Duration(seconds: 15));
       final data = response.data;
       if (data != null && data['data'] != null) {
         final list = data['data'] as List<dynamic>? ?? [];
         debugPrint(
             '[LocalMusicRepository] Successfully fetched ${list.length} remote cloud songs!');
-        final parsed = list.map((item) {
+        return list.map((item) {
           final id = item['id'] as String? ?? '';
           var streamUrl = item['stream_url'] as String? ??
               item['asset_path'] as String? ??
@@ -210,13 +198,11 @@ class LocalMusicRepositoryImpl implements MusicRepository {
                 favoriteIds.contains(id) || favoriteIds.contains(streamUrl),
           );
         }).toList();
-        _cachedRemoteCatalog = parsed;
-        return parsed;
       }
     } catch (e) {
       debugPrint('[LocalMusicRepository] Remote music API fetch error: $e');
     }
-    return _cachedRemoteCatalog ?? [];
+    return [];
   }
 
   @override
@@ -313,23 +299,18 @@ class LocalMusicRepositoryImpl implements MusicRepository {
 
   @override
   Future<SongEntity?> getSongById(String id) async {
-    var songs = _cachedSongs ?? await getLocalSongs();
+    var songs = await getLocalSongs();
     try {
       return songs.firstWhere((s) => s.id == id || s.assetPath == id);
     } catch (_) {}
 
-    // Check cached remote catalog if available
-    if (_cachedRemoteCatalog != null && _cachedRemoteCatalog!.isNotEmpty) {
-      try {
-        return _cachedRemoteCatalog!.firstWhere((s) => s.id == id || s.assetPath == id);
-      } catch (_) {}
-    }
-
-    // If not found, attempt refresh library
+    // If not found, force refresh library to load 428 cloud songs
+    songs = await refreshLibrary();
     try {
-      songs = await refreshLibrary();
       return songs.firstWhere((s) => s.id == id || s.assetPath == id);
     } catch (_) {}
+
+
 
     if (id.startsWith('http://') || id.startsWith('https://')) {
       return SongModel(
@@ -342,47 +323,27 @@ class LocalMusicRepositoryImpl implements MusicRepository {
       );
     }
 
-    final activeUri = Uri.parse(_config?.baseUrl ?? ApiConstants.baseUrl);
-    final cleanBase = '${activeUri.scheme}://${activeUri.host}${activeUri.hasPort ? ':${activeUri.port}' : ''}';
 
-    if (id.startsWith('remote_music_')) {
-      final numPart = int.tryParse(id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-      if (songs.isNotEmpty) {
-        final index = (numPart > 0 && numPart <= songs.length) ? (numPart - 1) : (id.hashCode.abs() % songs.length);
-        return songs[index];
-      }
+
+    if (id.startsWith('mediastore_')) {
       return SongModel(
         id: id,
-        title: 'Cloud Track #$numPart',
-        artist: 'SoulSync Cloud',
-        album: 'SoulSync Cloud Library',
-        assetPath: '$cleanBase/media/music/$id.mp3',
+        title: 'Partner Audio Track',
+        artist: 'SoulSync Partner',
+        album: 'Partner Device',
+        assetPath: 'assets/music/sample_1.mp3',
         duration: const Duration(seconds: 210),
       );
     }
 
-    if (id.startsWith('mediastore_')) {
-      // Deterministically map partner's media store ID to a distinct song from the available catalog
-      if (songs.isNotEmpty) {
-        final index = id.hashCode.abs() % songs.length;
-        final matched = songs[index];
-        return SongModel(
-          id: id,
-          title: matched.title,
-          artist: matched.artist,
-          album: matched.album,
-          assetPath: matched.assetPath,
-          duration: matched.duration,
-        );
-      }
-    }
-
-    if (songs.isNotEmpty) {
-      final index = id.hashCode.abs() % songs.length;
-      return songs[index];
-    }
-
-    return null;
+    return SongModel(
+      id: id,
+      title: 'Partner Track',
+      artist: 'SoulSync Partner',
+      album: 'SoulSync Room',
+      assetPath: 'assets/music/sample_1.mp3',
+      duration: const Duration(seconds: 210),
+    );
   }
 
   @override

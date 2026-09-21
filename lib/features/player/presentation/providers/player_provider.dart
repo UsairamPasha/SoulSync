@@ -65,7 +65,6 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration?>? _durationSub;
   StreamSubscription<ja.PlayerState>? _playerStateSub;
-  bool _isAutoSkipping = false;
 
   PlayerNotifier({
     required AudioPlayerService audioService,
@@ -124,14 +123,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         );
       }
 
-      // Only skip to next if the song completed naturally.
-      // On Web, HTML5 audio 'ended' event signals natural completion directly,
-      // while position may reset to 0 in some browsers upon completion.
-      final shouldAutoNext = isCompleted &&
-          (kIsWeb || state.playbackState.position > const Duration(seconds: 1));
-      if (shouldAutoNext) {
-        if (_isAutoSkipping) return;
-        _isAutoSkipping = true;
+      // Only skip to next if the song completed naturally (position > 1s)
+      if (isCompleted &&
+          state.playbackState.position > const Duration(seconds: 1)) {
         debugPrint(
             '[PlayerNotifier] Song completed naturally. Processing auto-next.');
 
@@ -141,20 +135,15 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
 
         if (sessionState.hasActiveSession && !isHost) {
           debugPrint('[PlayerNotifier] Non-host partner awaiting host auto-next event.');
-          _isAutoSkipping = false;
           return;
         }
 
         if (state.playbackState.repeatMode == RepeatModeEnum.one) {
           debugPrint('[PlayerNotifier] Repeat One enabled. Replaying current song.');
           seek(Duration.zero);
-          _audioService.play().whenComplete(() => _isAutoSkipping = false);
+          _audioService.play();
         } else {
-          skipToNext().whenComplete(() {
-            Future.delayed(const Duration(milliseconds: 600), () {
-              _isAutoSkipping = false;
-            });
-          });
+          skipToNext();
         }
       }
     });
@@ -166,15 +155,13 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       final songs = await repo.getLocalSongs();
       debugPrint('[PlayerNotifier] Loaded catalog: ${songs.length} songs');
       if (songs.isNotEmpty) {
-        final currentId = state.currentSong?.id;
-        final newIndex = currentId != null
-            ? songs.indexWhere((s) => s.id == currentId)
-            : 0;
         state = state.copyWith(
           queue: songs,
-          currentIndex: newIndex != -1 ? newIndex : 0,
+          currentIndex: 0,
+          currentSong: null, // Keep idle until explicitly started!
+          playbackState: const PlaybackStateEntity(isPlaying: false),
         );
-        _ref.read(queueNotifierProvider.notifier).setQueue(songs, state.currentIndex);
+        _ref.read(queueNotifierProvider.notifier).setQueue(songs, 0);
       }
     } catch (e) {
       debugPrint('[PlayerNotifier] Catalog load warning: $e');
@@ -188,6 +175,11 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   Future<void> playSongById(String songId, {int initialPositionMs = 0}) async {
     final myOpId = ++_playbackOpId;
     debugPrint('[AudioEngine] Play button pressed (songId: $songId, pos: ${initialPositionMs}ms, opId: $myOpId)');
+
+    // Ensure queue has full catalog
+    if (state.queue.length <= 3) {
+      await _loadInitialCatalog();
+    }
 
     final queueIndex = state.queue.indexWhere((s) => s.id == songId);
     if (queueIndex != -1) {
@@ -218,16 +210,6 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       state = state.copyWith(queue: newQueue);
       await playSongAtIndex(newQueue.length - 1, initialPositionMs: initialPositionMs, opId: myOpId);
     }
-  }
-
-  Future<void> playSongFromList(List<SongEntity> songs, int startIndex) async {
-    if (startIndex < 0 || startIndex >= songs.length) return;
-    state = state.copyWith(
-      queue: List<SongEntity>.from(songs),
-      currentIndex: startIndex,
-    );
-    _ref.read(queueNotifierProvider.notifier).setQueue(songs, startIndex);
-    await playSongAtIndex(startIndex);
   }
 
   Future<void> playSongAtIndex(int index, {int initialPositionMs = 0, int? opId}) async {
@@ -506,6 +488,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   }
 
   Future<void> skipToNext() async {
+    if (state.queue.length <= 3) {
+      await _loadInitialCatalog();
+    }
     final queue = state.queue;
     if (queue.isEmpty) return;
     final currIndex = state.currentIndex;
@@ -527,9 +512,8 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
       _ref.read(playbackSessionNotifierProvider.notifier).play(songId: nextSong.id, positionMs: 0);
-    } else {
-      await playSongAtIndex(nextIndex);
     }
+    await playSongAtIndex(nextIndex);
   }
 
   Future<void> skipToPrevious() async {
@@ -554,9 +538,8 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
       _ref.read(playbackSessionNotifierProvider.notifier).play(songId: prevSong.id, positionMs: 0);
-    } else {
-      await playSongAtIndex(prevIndex);
     }
+    await playSongAtIndex(prevIndex);
   }
 
   Future<void> setVolume(double volume) async {

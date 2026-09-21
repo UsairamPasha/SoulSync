@@ -96,6 +96,12 @@ class AudioPlayerService {
     _activeLoadPath = path;
 
     try {
+      if (kIsWeb) {
+        debugPrint('[AudioEngine] Resetting Web HTML5 Audio Element before loading: $path');
+        try {
+          await _player.stop();
+        } catch (_) {}
+      }
 
       Duration? duration;
       if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -112,13 +118,7 @@ class AudioPlayerService {
                   },
           );
 
-          duration = await _player.setAudioSource(audioSource).timeout(
-            const Duration(seconds: 25),
-            onTimeout: () {
-              debugPrint('[AudioEngine] SetAudioSource timed out for $path, falling back to estimated duration.');
-              return const Duration(seconds: 210);
-            },
-          );
+          duration = await _player.setAudioSource(audioSource);
           _currentlyLoadedPath = path;
           if (!completer.isCompleted) completer.complete(duration);
           return duration ?? const Duration(seconds: 210);
@@ -128,19 +128,7 @@ class AudioPlayerService {
         }
       } else if (kIsWeb) {
         debugPrint('[AudioEngine] Loading Web Asset Audio Source: $path');
-        try {
-          final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-          final webAssetUri = Uri.base.resolve('assets/$cleanPath');
-          debugPrint('[AudioEngine] Web asset direct URI: $webAssetUri');
-          final audioSource = AudioSource.uri(webAssetUri);
-          duration = await _player.setAudioSource(audioSource).timeout(
-            const Duration(seconds: 20),
-            onTimeout: () => const Duration(seconds: 210),
-          );
-        } catch (e) {
-          debugPrint('[AudioEngine] Web asset direct URI fallback to setAsset: $e');
-          duration = await _player.setAsset(path);
-        }
+        duration = await _player.setAsset(path);
         _currentlyLoadedPath = path;
         if (!completer.isCompleted) completer.complete(duration);
         return duration ?? const Duration(seconds: 210);

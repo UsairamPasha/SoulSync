@@ -49,12 +49,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen>
   }
 
   void _playSongList(List<SongEntity> songs, int startIndex) {
-    if (startIndex < 0 || startIndex >= songs.length) return;
-    final notifier = ref.read(playerNotifierProvider.notifier);
-    notifier.playSongFromList(songs, startIndex);
     final sessionState = ref.read(playbackSessionNotifierProvider);
-    if (sessionState.hasActiveSession) {
+    if (sessionState.hasActiveSession && startIndex >= 0 && startIndex < songs.length) {
       ref.read(playbackSessionNotifierProvider.notifier).play(songId: songs[startIndex].id, positionMs: 0);
+    } else {
+      final notifier = ref.read(playerNotifierProvider.notifier);
+      notifier.playSongAtIndex(startIndex);
     }
   }
 
@@ -174,7 +174,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen>
                                   itemBuilder: (context, index) {
                                     final song = recentlyAdded[index];
                                     return GestureDetector(
-                                      onTap: () => _playSongList(recentlyAdded, index),
+                                      onTap: () => _playSongList(songs, index),
                                       child: Container(
                                         width: 140,
                                         margin:
