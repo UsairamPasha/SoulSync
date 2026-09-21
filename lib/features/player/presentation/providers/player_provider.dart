@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:dio/dio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,7 +19,6 @@ import 'package:soulsync/features/player/domain/repositories/music_repository.da
 import 'package:soulsync/features/player/domain/usecases/get_local_songs_usecase.dart';
 import 'package:soulsync/features/player/presentation/providers/queue_provider.dart';
 import 'package:soulsync/features/player/presentation/providers/recently_played_provider.dart';
-import 'package:soulsync/features/queue/presentation/providers/queue_provider.dart';
 
 import 'package:soulsync/features/auth/presentation/providers/auth_provider.dart';
 import 'package:soulsync/features/realtime/presentation/providers/realtime_providers.dart';
@@ -168,13 +166,15 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       final songs = await repo.getLocalSongs();
       debugPrint('[PlayerNotifier] Loaded catalog: ${songs.length} songs');
       if (songs.isNotEmpty) {
+        final currentId = state.currentSong?.id;
+        final newIndex = currentId != null
+            ? songs.indexWhere((s) => s.id == currentId)
+            : 0;
         state = state.copyWith(
           queue: songs,
-          currentIndex: 0,
-          currentSong: null, // Keep idle until explicitly started!
-          playbackState: const PlaybackStateEntity(isPlaying: false),
+          currentIndex: newIndex != -1 ? newIndex : 0,
         );
-        _ref.read(queueNotifierProvider.notifier).setQueue(songs, 0);
+        _ref.read(queueNotifierProvider.notifier).setQueue(songs, state.currentIndex);
       }
     } catch (e) {
       debugPrint('[PlayerNotifier] Catalog load warning: $e');
@@ -188,11 +188,6 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   Future<void> playSongById(String songId, {int initialPositionMs = 0}) async {
     final myOpId = ++_playbackOpId;
     debugPrint('[AudioEngine] Play button pressed (songId: $songId, pos: ${initialPositionMs}ms, opId: $myOpId)');
-
-    // Ensure queue has full catalog
-    if (state.queue.length <= 3) {
-      await _loadInitialCatalog();
-    }
 
     final queueIndex = state.queue.indexWhere((s) => s.id == songId);
     if (queueIndex != -1) {
@@ -511,9 +506,6 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   }
 
   Future<void> skipToNext() async {
-    if (state.queue.length <= 3) {
-      await _loadInitialCatalog();
-    }
     final queue = state.queue;
     if (queue.isEmpty) return;
     final currIndex = state.currentIndex;
@@ -535,8 +527,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
       _ref.read(playbackSessionNotifierProvider.notifier).play(songId: nextSong.id, positionMs: 0);
+    } else {
+      await playSongAtIndex(nextIndex);
     }
-    await playSongAtIndex(nextIndex);
   }
 
   Future<void> skipToPrevious() async {
@@ -561,8 +554,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
       _ref.read(playbackSessionNotifierProvider.notifier).play(songId: prevSong.id, positionMs: 0);
+    } else {
+      await playSongAtIndex(prevIndex);
     }
-    await playSongAtIndex(prevIndex);
   }
 
   Future<void> setVolume(double volume) async {
