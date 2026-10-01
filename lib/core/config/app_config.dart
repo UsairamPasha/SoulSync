@@ -14,7 +14,7 @@ class AppConfig {
   const AppConfig({
     this.environment = AppEnvironment.dev,
     this.baseUrl =
-        'https://bio-merge-rim-humanitarian.trycloudflare.com',
+        'https://notify-baltimore-metals-argued.trycloudflare.com',
     this.apiVersion = 'v1',
     this.connectTimeout = const Duration(seconds: 60),
     this.receiveTimeout = const Duration(seconds: 60),
@@ -48,7 +48,7 @@ class AppConfig {
 class ServerUrlNotifier extends StateNotifier<String> {
   final ServerUrlStorageService _storageService;
   static const String defaultUrl =
-      'https://glossary-meyer-mercy-transition.trycloudflare.com';
+      'https://notify-baltimore-metals-argued.trycloudflare.com';
 
   ServerUrlNotifier(this._storageService) : super(defaultUrl) {
     _init();
