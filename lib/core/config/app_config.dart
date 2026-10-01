@@ -14,7 +14,7 @@ class AppConfig {
   const AppConfig({
     this.environment = AppEnvironment.dev,
     this.baseUrl =
-        'https://glossary-meyer-mercy-transition.trycloudflare.com',
+        'https://bio-merge-rim-humanitarian.trycloudflare.com',
     this.apiVersion = 'v1',
     this.connectTimeout = const Duration(seconds: 60),
     this.receiveTimeout = const Duration(seconds: 60),
