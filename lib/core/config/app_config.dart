@@ -47,7 +47,7 @@ class AppConfig {
 class ServerUrlNotifier extends StateNotifier<String> {
   final ServerUrlStorageService _storageService;
   static const String defaultUrl =
-      'https://takes-raising-models-henry.trycloudflare.com';
+      'https://correct-wolf-laura-issn.trycloudflare.com';
 
   ServerUrlNotifier(this._storageService) : super(defaultUrl) {
     _init();
