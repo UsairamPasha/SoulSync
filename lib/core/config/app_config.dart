@@ -13,7 +13,7 @@ class AppConfig {
 
   const AppConfig({
     this.environment = AppEnvironment.dev,
-    this.baseUrl = 'https://takes-raising-models-henry.trycloudflare.com',
+    this.baseUrl = 'https://correct-wolf-laura-issn.trycloudflare.com',
     this.apiVersion = 'v1',
     this.connectTimeout = const Duration(seconds: 60),
     this.receiveTimeout = const Duration(seconds: 60),
