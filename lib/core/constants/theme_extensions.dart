@@ -18,9 +18,9 @@ class SoulSyncCustomColors extends ThemeExtension<SoulSyncCustomColors> {
 
   static const dark = SoulSyncCustomColors(
     cardBackground: AppColors.surfaceDarkVariant,
-    glassBorder: Color(0x1FFFFFFF),
-    musicWaveform: AppColors.accent,
-    syncedIndicator: AppColors.success,
+    glassBorder: Color(0x26E50914),
+    musicWaveform: AppColors.primaryLight,
+    syncedIndicator: AppColors.primaryLight,
   );
 
   static const light = SoulSyncCustomColors(

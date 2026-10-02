@@ -155,7 +155,7 @@ class _ServerUrlDialogState extends ConsumerState<ServerUrlDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: const Color(0xFF1E1E2E),
+      backgroundColor: const Color(0xFF140D10),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: SingleChildScrollView(
@@ -209,7 +209,7 @@ class _ServerUrlDialogState extends ConsumerState<ServerUrlDialog> {
                   hintText: 'https://xxx.trycloudflare.com',
                   hintStyle: const TextStyle(color: Colors.white30),
                   filled: true,
-                  fillColor: const Color(0xFF2A2A3D),
+                  fillColor: const Color(0xFF1C1317),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,

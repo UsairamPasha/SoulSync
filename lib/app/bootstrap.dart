@@ -34,7 +34,7 @@ Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
         androidNotificationChannelName: 'SoulSync Music Playback',
         androidNotificationOngoing: false,
         androidStopForegroundOnPause: false,
-        notificationColor: Color(0xFF6C5CE7),
+        notificationColor: Color(0xFFD3122A),
       ),
     );
     debugPrint('[CRITICAL_BOOTSTRAP] AudioService.init SUCCESS! gAudioHandler: $gAudioHandler');
