@@ -96,7 +96,12 @@ class AudioPlayerService {
     _activeLoadPath = path;
 
     try {
-      if (kIsWeb) {
+      if (_currentlyLoadedPath != path && _player.playing) {
+        try {
+          await _player.pause();
+          await _player.stop();
+        } catch (_) {}
+      } else if (kIsWeb) {
         debugPrint('[AudioEngine] Resetting Web HTML5 Audio Element before loading: $path');
         try {
           if (_player.playing) {
@@ -199,6 +204,10 @@ class AudioPlayerService {
       return duration;
     } catch (e) {
       debugPrint('[AudioEngine] Error loading track ($path): $e');
+      try {
+        await _player.stop();
+      } catch (_) {}
+      _currentlyLoadedPath = null;
       if (!completer.isCompleted) completer.completeError(e);
       rethrow;
     } finally {

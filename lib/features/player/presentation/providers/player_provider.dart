@@ -226,6 +226,16 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     }
   }
 
+  Future<void> playSongFromList(List<SongEntity> songs, int startIndex, {int initialPositionMs = 0}) async {
+    if (startIndex < 0 || startIndex >= songs.length) return;
+    state = state.copyWith(
+      queue: List<SongEntity>.from(songs),
+      currentIndex: startIndex,
+    );
+    _ref.read(queueNotifierProvider.notifier).setQueue(songs, startIndex);
+    await playSongAtIndex(startIndex, initialPositionMs: initialPositionMs);
+  }
+
   Future<void> playSongAtIndex(int index, {int initialPositionMs = 0, int? opId}) async {
     final myOpId = opId ?? ++_playbackOpId;
     if (index < 0 || index >= state.queue.length) return;
