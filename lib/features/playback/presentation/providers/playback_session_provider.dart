@@ -395,7 +395,7 @@ class PlaybackSessionNotifier extends StateNotifier<PlaybackSessionState> {
 
   int _lastPlayPauseTimeMs = 0;
 
-  Future<bool> play({int positionMs = 0, String? songId}) async {
+  Future<bool> play({int positionMs = 0, String? songId, bool triggerLocalPlayback = true}) async {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     if (nowMs - _lastPlayPauseTimeMs < 150) {
       debugPrint('[PlaybackSessionNotifier] Debouncing rapid play request (${nowMs - _lastPlayPauseTimeMs}ms < 150ms)');
@@ -436,9 +436,11 @@ class PlaybackSessionNotifier extends StateNotifier<PlaybackSessionState> {
       );
     }
 
-    // 3. Trigger local audio engine playback
-    final playerNotifier = _ref.read(playerNotifierProvider.notifier);
-    await playerNotifier.playSongById(targetSongId, initialPositionMs: positionMs);
+    // 3. Trigger local audio engine playback if requested
+    if (triggerLocalPlayback) {
+      final playerNotifier = _ref.read(playerNotifierProvider.notifier);
+      await playerNotifier.playSongById(targetSongId, initialPositionMs: positionMs);
+    }
     return true;
   }
 

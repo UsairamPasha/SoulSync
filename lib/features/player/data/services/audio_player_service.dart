@@ -86,7 +86,9 @@ class AudioPlayerService {
       } else {
         debugPrint('[AudioEngine] Track switch requested ($path). Cancelling previous load of $_activeLoadPath.');
         if (!_activeLoadCompleter!.isCompleted) {
-          _activeLoadCompleter!.complete(null);
+          _activeLoadCompleter!.completeError(
+            Exception('Track load cancelled: switched to $path'),
+          );
         }
       }
     }
@@ -96,19 +98,11 @@ class AudioPlayerService {
     _activeLoadPath = path;
 
     try {
-      if (_currentlyLoadedPath != path && _player.playing) {
+      if (_currentlyLoadedPath != path) {
         try {
-          await _player.pause();
           await _player.stop();
         } catch (_) {}
-      } else if (kIsWeb) {
-        debugPrint('[AudioEngine] Resetting Web HTML5 Audio Element before loading: $path');
-        try {
-          if (_player.playing) {
-            await _player.pause();
-          }
-          await _player.stop();
-        } catch (_) {}
+        _currentlyLoadedPath = null;
       }
 
       Duration? duration;
@@ -126,7 +120,12 @@ class AudioPlayerService {
                   },
           );
 
-          duration = await _player.setAudioSource(audioSource);
+          duration = await _player.setAudioSource(audioSource).timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException('Timed out loading audio stream: $path');
+            },
+          );
           _currentlyLoadedPath = path;
           if (!completer.isCompleted) completer.complete(duration);
           return duration ?? const Duration(seconds: 210);
@@ -220,6 +219,11 @@ class AudioPlayerService {
 
   Future<void> play() async {
     await initialize();
+    if (_currentlyLoadedPath == null) {
+      debugPrint(
+          '[AudioEngine] Warning: Cannot call play() because no track is currently loaded (_currentlyLoadedPath is null).');
+      return;
+    }
     if (_player.processingState == ProcessingState.completed) {
       debugPrint('[AudioEngine] Track completed previously. Seeking to 00:00 before playing.');
       await _player.seek(Duration.zero);

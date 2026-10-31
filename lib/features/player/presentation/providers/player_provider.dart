@@ -307,11 +307,13 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         debugPrint('[AudioEngine] Aborting load/play because operation #$myOpId was cancelled by #$_playbackOpId');
         return;
       }
-      if (dur != null && dur > Duration.zero) {
-        state = state.copyWith(
-          playbackState: state.playbackState.copyWith(duration: dur),
-        );
+      if (dur == null || dur <= Duration.zero) {
+        debugPrint('[AudioEngine] Aborting play because loadAsset returned null/zero for ${song.title}');
+        return;
       }
+      state = state.copyWith(
+        playbackState: state.playbackState.copyWith(duration: dur),
+      );
       if (initialPositionMs > 0) {
         debugPrint('[AudioEngine] Pre-seeking asset to ${initialPositionMs}ms before play');
         await _audioService.seek(Duration(milliseconds: initialPositionMs));
@@ -537,7 +539,11 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final nextSong = queue[nextIndex];
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
-      _ref.read(playbackSessionNotifierProvider.notifier).play(songId: nextSong.id, positionMs: 0);
+      _ref.read(playbackSessionNotifierProvider.notifier).play(
+            songId: nextSong.id,
+            positionMs: 0,
+            triggerLocalPlayback: false,
+          );
     }
     await playSongAtIndex(nextIndex);
   }
@@ -563,7 +569,11 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     final prevSong = queue[prevIndex];
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
-      _ref.read(playbackSessionNotifierProvider.notifier).play(songId: prevSong.id, positionMs: 0);
+      _ref.read(playbackSessionNotifierProvider.notifier).play(
+            songId: prevSong.id,
+            positionMs: 0,
+            triggerLocalPlayback: false,
+          );
     }
     await playSongAtIndex(prevIndex);
   }
