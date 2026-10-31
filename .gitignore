@@ -52,3 +52,4 @@ backend/media/
 *.env
 .env
 
+*.backup_checkpoint

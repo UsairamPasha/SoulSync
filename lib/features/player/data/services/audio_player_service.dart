@@ -110,15 +110,7 @@ class AudioPlayerService {
         debugPrint('[AudioEngine] Loading HTTP Audio Source: $path');
         try {
           final cleanUri = Uri.tryParse(path) ?? Uri.parse(Uri.encodeFull(path));
-          final audioSource = AudioSource.uri(
-            cleanUri,
-            headers: kIsWeb
-                ? null
-                : const {
-                    'ngrok-skip-browser-warning': '69420',
-                    'User-Agent': 'SoulSyncApp/1.0',
-                  },
-          );
+          final audioSource = AudioSource.uri(cleanUri);
 
           duration = await _player.setAudioSource(audioSource).timeout(
             const Duration(seconds: 15),

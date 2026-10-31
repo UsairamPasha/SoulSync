@@ -105,22 +105,25 @@ class RangeFileWrapper:
     def __next__(self):
         try:
             if self.remaining is not None and self.remaining <= 0:
-                self.file_obj.close()
+                self.close()
                 raise StopIteration
             read_len = self.blksize if self.remaining is None else min(self.remaining, self.blksize)
             data = self.file_obj.read(read_len)
             if not data:
-                self.file_obj.close()
+                self.close()
                 raise StopIteration
             if self.remaining is not None:
                 self.remaining -= len(data)
             return data
         except (BrokenPipeError, ConnectionResetError, OSError):
-            try:
-                self.file_obj.close()
-            except Exception:
-                pass
+            self.close()
             raise StopIteration
+
+    def close(self):
+        try:
+            self.file_obj.close()
+        except Exception:
+            pass
 
 class StreamAudioView(View):
     def get(self, request, filename):
@@ -158,7 +161,7 @@ class StreamAudioView(View):
                 f = open(file_path, 'rb')
                 wrapper = RangeFileWrapper(f, offset=start_byte, length=length)
 
-                response = StreamingHttpResponse(
+                response = FileResponse(
                     wrapper,
                     status=206,
                     content_type='audio/mpeg'
@@ -166,7 +169,7 @@ class StreamAudioView(View):
                 response['Content-Range'] = f'bytes {start_byte}-{end_byte}/{file_size}'
                 response['Content-Length'] = str(length)
                 response['Accept-Ranges'] = 'bytes'
-                response['Cache-Control'] = 'public, max-age=31536000, immutable'
+                response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
                 response['ETag'] = etag
                 response['Access-Control-Allow-Origin'] = '*'
                 response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
@@ -176,14 +179,15 @@ class StreamAudioView(View):
             except Exception as e:
                 pass
 
+        f = open(file_path, 'rb')
         response = FileResponse(
-            open(file_path, 'rb'),
+            f,
             status=200,
             content_type='audio/mpeg'
         )
         response['Content-Length'] = str(file_size)
         response['Accept-Ranges'] = 'bytes'
-        response['Cache-Control'] = 'public, max-age=31536000, immutable'
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response['ETag'] = etag
         response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
