@@ -14,7 +14,7 @@ class AppConfig {
   const AppConfig({
     this.environment = AppEnvironment.dev,
     this.baseUrl =
-        'https://refinance-thumbzilla-coral-spokesman.trycloudflare.com',
+        'https://trained-claire-stereo-avenue.trycloudflare.com',
     this.apiVersion = 'v1',
     this.connectTimeout = const Duration(seconds: 60),
     this.receiveTimeout = const Duration(seconds: 60),
@@ -48,7 +48,7 @@ class AppConfig {
 class ServerUrlNotifier extends StateNotifier<String> {
   final ServerUrlStorageService _storageService;
   static const String defaultUrl =
-      'https://refinance-thumbzilla-coral-spokesman.trycloudflare.com';
+      'https://trained-claire-stereo-avenue.trycloudflare.com';
 
   ServerUrlNotifier(this._storageService) : super(defaultUrl) {
     _init();

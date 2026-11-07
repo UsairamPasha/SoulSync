@@ -1,7 +1,7 @@
 /// Network and API constants for SoulSync.
 abstract class ApiConstants {
   static const String baseUrl =
-      'https://refinance-thumbzilla-coral-spokesman.trycloudflare.com/api/v1'; // Configurable for dev/prod
+      'https://trained-claire-stereo-avenue.trycloudflare.com/api/v1'; // Configurable for dev/prod
   static const Duration connectTimeout = Duration(seconds: 60);
   static const Duration receiveTimeout = Duration(seconds: 60);
   static const Duration sendTimeout = Duration(seconds: 60);
