@@ -548,11 +548,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       }
     }
 
-    if (!isAutoSkip) {
-      try {
-        await _audioService.stop();
-      } catch (_) {}
-    }
+    try {
+      await _audioService.stop();
+    } catch (_) {}
 
     final nextSong = queue[nextIndex];
     final sessionState = _ref.read(playbackSessionNotifierProvider);

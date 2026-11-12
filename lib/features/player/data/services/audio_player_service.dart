@@ -102,6 +102,9 @@ class AudioPlayerService {
 
     try {
       if (_currentlyLoadedPath != path) {
+        try {
+          await _player.stop();
+        } catch (_) {}
         _currentlyLoadedPath = null;
       }
 
@@ -112,7 +115,10 @@ class AudioPlayerService {
           final cleanUri = Uri.tryParse(path) ?? Uri.parse(Uri.encodeFull(path));
           final audioSource = AudioSource.uri(cleanUri);
 
-          duration = await _player.setAudioSource(audioSource).timeout(
+          duration = await _player.setAudioSource(
+            audioSource,
+            initialPosition: Duration.zero,
+          ).timeout(
             const Duration(seconds: 8),
             onTimeout: () {
               throw TimeoutException('Timed out loading audio stream: $path');
