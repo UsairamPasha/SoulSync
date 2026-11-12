@@ -171,11 +171,13 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       if (songs.isNotEmpty) {
         state = state.copyWith(
           queue: songs,
-          currentIndex: 0,
-          currentSong: null, // Keep idle until explicitly started!
-          playbackState: const PlaybackStateEntity(isPlaying: false),
+          currentIndex: (state.currentIndex >= 0 && state.currentIndex < songs.length)
+              ? state.currentIndex
+              : 0,
+          currentSong: state.currentSong,
+          playbackState: state.playbackState,
         );
-        _ref.read(queueNotifierProvider.notifier).setQueue(songs, 0);
+        _ref.read(queueNotifierProvider.notifier).setQueue(songs, state.currentIndex);
       }
     } catch (e) {
       debugPrint('[PlayerNotifier] Catalog load warning: $e');
@@ -241,8 +243,11 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (index < 0 || index >= state.queue.length) return;
     final song = state.queue[index];
 
-    // If song is ALREADY playing, check if position seek is requested
-    if (state.currentSong?.id == song.id &&
+    // If song is ALREADY playing and NOT stuck/buffering, check if position seek is requested
+    final isStuckOrBuffering = _audioService.player.processingState == ja.ProcessingState.buffering ||
+        _audioService.player.processingState == ja.ProcessingState.idle;
+    if (!isStuckOrBuffering &&
+        state.currentSong?.id == song.id &&
         state.playbackState.isPlaying &&
         _audioService.player.processingState != ja.ProcessingState.completed) {
       debugPrint('[AudioEngine] Song ${song.title} is already playing.');
@@ -349,6 +354,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       debugPrint('[AudioEngine] Playback started cleanly: ${song.title}');
     } catch (e) {
       debugPrint('[AudioEngine] Error playing song at index $index: $e');
+      try {
+        await _audioService.stop();
+      } catch (_) {}
       state = state.copyWith(
         playbackState: state.playbackState.copyWith(
           isPlaying: false,
@@ -399,14 +407,19 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   Future<void> pauseSong() async {
     final myOpId = ++_playbackOpId;
     debugPrint('[DIAGNOSTIC-1B] PlayerNotifier.pauseSong() called (opId: $myOpId). Current local playing: ${state.playbackState.isPlaying}');
-    await _audioService.pause();
-    if (myOpId != _playbackOpId) {
-      debugPrint('[AudioEngine] Aborting pauseSong state update because operation #$myOpId was superseded by #$_playbackOpId');
-      return;
-    }
+    
+    // 1. Immediately reflect PAUSED in UI state
     state = state.copyWith(
-      playbackState: state.playbackState.copyWith(isPlaying: false),
+      playbackState: state.playbackState.copyWith(isPlaying: false, isBuffering: false),
     );
+
+    // 2. Pause audio engine directly
+    try {
+      await _audioService.pause();
+    } catch (e) {
+      debugPrint('[AudioEngine] Pause error: $e');
+    }
+
     if (state.currentSong != null) {
       _notificationService.showPlaybackNotification(
         state.currentSong!,
@@ -440,8 +453,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (sessionState.hasActiveSession) {
       final sessionNotifier = _ref.read(playbackSessionNotifierProvider.notifier);
       if (isCurrentlyPlaying) {
-        debugPrint('[DIAGNOSTIC-1A] Decision: Calling sessionNotifier.pause(pos: ${state.playbackState.position.inMilliseconds}ms)');
-        await sessionNotifier.pause(positionMs: state.playbackState.position.inMilliseconds);
+        debugPrint('[DIAGNOSTIC-1A] Decision: Calling local pauseSong() AND sessionNotifier.pause()');
+        await pauseSong();
+        unawaited(sessionNotifier.pause(positionMs: state.playbackState.position.inMilliseconds));
       } else {
         final targetSongId = state.currentSong?.id ?? sessionState.session?.currentSongId ?? 'song_1';
         debugPrint('[DIAGNOSTIC-1A] Decision: Calling sessionNotifier.play(targetSongId: $targetSongId, pos: ${state.playbackState.position.inMilliseconds}ms)');
@@ -458,7 +472,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       return;
     }
 
-    if (state.playbackState.isPlaying) {
+    if (isCurrentlyPlaying) {
       await pauseSong();
     } else {
       await resumeSong();
@@ -516,7 +530,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   }
 
   Future<void> skipToNext() async {
-    if (state.queue.length <= 3) {
+    if (state.queue.isEmpty) {
       await _loadInitialCatalog();
     }
     final queue = state.queue;
@@ -536,14 +550,19 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       }
     }
 
+    // Immediately stop current audio so it cannot keep playing
+    try {
+      await _audioService.stop();
+    } catch (_) {}
+
     final nextSong = queue[nextIndex];
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
-      _ref.read(playbackSessionNotifierProvider.notifier).play(
+      unawaited(_ref.read(playbackSessionNotifierProvider.notifier).play(
             songId: nextSong.id,
             positionMs: 0,
             triggerLocalPlayback: false,
-          );
+          ));
     }
     await playSongAtIndex(nextIndex);
   }
@@ -566,14 +585,19 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       }
     }
 
+    // Immediately stop current audio so it cannot keep playing
+    try {
+      await _audioService.stop();
+    } catch (_) {}
+
     final prevSong = queue[prevIndex];
     final sessionState = _ref.read(playbackSessionNotifierProvider);
     if (sessionState.hasActiveSession) {
-      _ref.read(playbackSessionNotifierProvider.notifier).play(
+      unawaited(_ref.read(playbackSessionNotifierProvider.notifier).play(
             songId: prevSong.id,
             positionMs: 0,
             triggerLocalPlayback: false,
-          );
+          ));
     }
     await playSongAtIndex(prevIndex);
   }

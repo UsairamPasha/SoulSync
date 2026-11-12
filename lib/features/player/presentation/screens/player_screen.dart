@@ -24,8 +24,15 @@ import 'package:soulsync/shared/widgets/snackbars/app_snackbars.dart';
 
 import 'package:soulsync/features/queue/presentation/screens/queue_screen.dart';
 
-class PlayerScreen extends ConsumerWidget {
+class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
+
+  @override
+  ConsumerState<PlayerScreen> createState() => _PlayerScreenState();
+}
+
+class _PlayerScreenState extends ConsumerState<PlayerScreen> {
+  double? _dragPositionSec;
 
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes;
@@ -71,7 +78,7 @@ class PlayerScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final playerState = ref.watch(playerNotifierProvider);
     final playerNotifier = ref.read(playerNotifierProvider.notifier);
     final playbackSettings = ref.watch(playbackSettingsNotifierProvider);
@@ -99,8 +106,9 @@ class PlayerScreen extends ConsumerWidget {
 
     final maxDurationSec =
         duration.inSeconds > 0 ? duration.inSeconds.toDouble() : 180.0;
+    final displayPosSec = _dragPositionSec ?? position.inSeconds.toDouble();
     final currentPosSec =
-        position.inSeconds.toDouble().clamp(0.0, maxDurationSec);
+        displayPosSec.clamp(0.0, maxDurationSec);
 
     return AppScaffold(
       appBar: AppBar(
@@ -285,11 +293,19 @@ class PlayerScreen extends ConsumerWidget {
                       min: 0,
                       max: maxDurationSec,
                       onChanged: (val) {
-                        final posMs = (val * 1000).toInt();
+                        setState(() {
+                          _dragPositionSec = val;
+                        });
+                      },
+                      onChangeEnd: (val) {
+                        setState(() {
+                          _dragPositionSec = null;
+                        });
+                        final targetPos = Duration(seconds: val.toInt());
                         if (sessionState.hasActiveSession || roomState.room != null) {
-                          sessionNotifier.seek(positionMs: posMs);
+                          sessionNotifier.seek(positionMs: targetPos.inMilliseconds);
                         } else {
-                          playerNotifier.seek(Duration(seconds: val.toInt()));
+                          playerNotifier.seek(targetPos);
                         }
                       },
                     ),
@@ -300,7 +316,9 @@ class PlayerScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _formatDuration(position),
+                          _formatDuration(_dragPositionSec != null
+                              ? Duration(seconds: _dragPositionSec!.toInt())
+                              : position),
                           style: context.textTheme.labelSmall?.copyWith(
                             color: context.colorScheme.onSurfaceVariant,
                           ),
@@ -360,19 +378,7 @@ class PlayerScreen extends ConsumerWidget {
                     ),
                     onPressed: () {
                       HapticFeedback.lightImpact();
-                      if (sessionState.hasActiveSession) {
-                        if (isPlaying) {
-                          sessionNotifier.pause(positionMs: position.inMilliseconds);
-                        } else {
-                          final targetSongId = currentSong?.id ?? session?.currentSongId ?? 'song_1';
-                          sessionNotifier.play(
-                            songId: targetSongId,
-                            positionMs: position.inMilliseconds,
-                          );
-                        }
-                      } else {
-                        playerNotifier.togglePlayPause();
-                      }
+                      playerNotifier.togglePlayPause();
                     },
                     tooltip: isPlaying ? 'Pause' : 'Play',
                   ),

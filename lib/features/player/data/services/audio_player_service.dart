@@ -90,6 +90,9 @@ class AudioPlayerService {
             Exception('Track load cancelled: switched to $path'),
           );
         }
+        try {
+          await _player.stop();
+        } catch (_) {}
       }
     }
 
@@ -113,7 +116,7 @@ class AudioPlayerService {
           final audioSource = AudioSource.uri(cleanUri);
 
           duration = await _player.setAudioSource(audioSource).timeout(
-            const Duration(seconds: 15),
+            const Duration(seconds: 8),
             onTimeout: () {
               throw TimeoutException('Timed out loading audio stream: $path');
             },
@@ -233,18 +236,40 @@ class AudioPlayerService {
 
   Future<void> pause() async {
     debugPrint('[AudioEngine] Playback paused');
-    await _player.pause();
+    try {
+      await _player.pause();
+    } catch (e) {
+      debugPrint('[AudioEngine] Pause error: $e');
+    }
   }
 
   Future<void> stop() async {
     debugPrint('[AudioEngine] Playback stopped');
     _currentlyLoadedPath = null;
-    await _player.stop();
+    try {
+      await _player.stop();
+    } catch (e) {
+      debugPrint('[AudioEngine] Stop error: $e');
+    }
+  }
+
+  Future<void> hardReset() async {
+    debugPrint('[AudioEngine] Hard reset initiated');
+    _currentlyLoadedPath = null;
+    _activeLoadCompleter = null;
+    _activeLoadPath = null;
+    try {
+      await _player.stop();
+    } catch (_) {}
   }
 
   Future<void> seek(Duration position) async {
     debugPrint('[AudioPlayerService] Action: seek($position)');
-    await _player.seek(position);
+    try {
+      await _player.seek(position);
+    } catch (e) {
+      debugPrint('[AudioPlayerService] Seek error: $e');
+    }
   }
 
   Future<void> setVolume(double volume) async {
