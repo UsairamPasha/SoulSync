@@ -102,9 +102,6 @@ class AudioPlayerService {
 
     try {
       if (_currentlyLoadedPath != path) {
-        try {
-          await _player.stop();
-        } catch (_) {}
         _currentlyLoadedPath = null;
       }
 

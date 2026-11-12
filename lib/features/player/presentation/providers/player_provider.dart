@@ -129,9 +129,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       }
 
       // Only skip to next if the song completed naturally.
-      // On Web, HTML5 audio 'ended' event signals completion directly.
-      final shouldAutoNext = isCompleted &&
-          (kIsWeb || state.playbackState.position > const Duration(seconds: 1));
+      final shouldAutoNext = isCompleted;
       if (shouldAutoNext) {
         if (_isAutoSkipping) return;
         _isAutoSkipping = true;
@@ -153,7 +151,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
           seek(Duration.zero);
           _audioService.play().whenComplete(() => _isAutoSkipping = false);
         } else {
-          skipToNext().whenComplete(() {
+          skipToNext(isAutoSkip: true).whenComplete(() {
             Future.delayed(const Duration(milliseconds: 600), () {
               _isAutoSkipping = false;
             });
@@ -529,7 +527,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     return state.queue[prevIndex];
   }
 
-  Future<void> skipToNext() async {
+  Future<void> skipToNext({bool isAutoSkip = false}) async {
     if (state.queue.isEmpty) {
       await _loadInitialCatalog();
     }
@@ -550,10 +548,11 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       }
     }
 
-    // Immediately stop current audio so it cannot keep playing
-    try {
-      await _audioService.stop();
-    } catch (_) {}
+    if (!isAutoSkip) {
+      try {
+        await _audioService.stop();
+      } catch (_) {}
+    }
 
     final nextSong = queue[nextIndex];
     final sessionState = _ref.read(playbackSessionNotifierProvider);
